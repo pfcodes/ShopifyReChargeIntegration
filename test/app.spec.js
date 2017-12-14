@@ -1,10 +1,10 @@
-const mocha = require('mocha')
-const assert = require('assert')
+const app     = require('../app')
+const dotenv  = require('dotenv').config()
+const mocha   = require('mocha')
+const assert  = require('assert')
 
-describe('Retrieve user from ReCharge', () => {
-  it('')
-})
-
-describe('Update subscription package', () => {
-  it('')
+describe('Application is properly configured.', () => {
+  it('RECHARGE_API_KEY is defined in the .env file.', () => {
+    assert.ok(process.env.RECHARGE_API_KEY)
+  })
 })
