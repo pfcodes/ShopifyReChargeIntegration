@@ -1,6 +1,6 @@
 // TODO: Implement request-promise-native
 const dotenv  = require('dotenv').config()
-const request = require('request')
+const request = require('request-promise-native')
 const chalk   = require('chalk')
 
 const RECHARGE_API_ENDPOINT = 'https://api.rechargeapps.com'
@@ -24,7 +24,7 @@ const debug = {
   }
 }
 
-const app = {
+const App = {
 
   baseOptions: {
     method: '',
@@ -38,42 +38,66 @@ const app = {
   },
 
   makeRequest: (action, parameters) => new Promise((resolve, reject) => {
-    let options = app.baseOptions
+    const options = App.baseOptions
 
     // Mutate the options based on the request type
     switch (action) {
-      case "getStoreInfo":
+      case 'getStoreInfo':
         options.method = 'GET'
       break
 
-      case "getUserByShopifyId":
+      case 'getUserByShopifyId':
         options.method = 'GET'
-        options.url += `/customers?shopify_customer_id=${parameters.shopify_customer_id}`
+        options.url += `/customers?shopify_customer_id=
+                        ${parameters.shopify_customer_id}`
       break
 
       default:
-        return reject('Unknown or missing request method.')
+        reject(Error('Unknown or missing request method.'))
       break
     }
 
     // Make the request
     debug.checkpoint(`About to make a '${action}' request.`)
 
-    let req = request(options, (error, response, body) => {
+    const req = request(options, (error, response, body) => {
       if (error) {
         return reject(error)
       }
-      debug.checkpoint(`Received a response from the server: ${response.statusCode}`)
-      return resolve(body)
+      if (response.statusCode !== 200) {
+        return reject(Error(`Received a NOT OK status code of: 
+                      ${response.statusCode}`))
+      }
+
+return resolve(body)
     })
-  })
+  }),
+
+  // LAMBDA Handler
+  handler: (event, context, callback) => {
+    let method = event.method;
+    let options = event.options;
+    
+    App.makeRequest(method, options)
+      .then((responseBody) => {
+        let customer = JSON.parse(responseBody).customers[0]
+        
+        for (let i = 0; i < Object.keys(customer).length; i++) {
+          let currentKey = Object.keys(customer)[i]
+          debug.info(`${currentKey}: ${customer[currentKey]}`)
+        }
+      })
+      .catch((err) => debug.error(err))
+  }
 }
 
-app.makeRequest('getUserByShopifyId', {shopify_customer_id: 90792919046})
-  .then((responseBody) => {
+// Create Subscription (High Priority)
 
-    
+// List Subscriptions (High Priority)
 
-  }).catch((err) => debug.error(err) )
+// Update Items in Subscription Box (High Priority)
 
-module.exports = app
+// Purchase History (Low Priority)
+
+
+module.exports = App
